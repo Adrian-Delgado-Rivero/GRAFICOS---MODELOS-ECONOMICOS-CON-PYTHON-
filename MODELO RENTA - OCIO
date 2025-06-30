@@ -101,11 +101,11 @@ plt.xticks(np.arange(5, 31, 2))  # Marcas del eje X cada 2 unidades salariales (
 plt.legend(fontsize=12, loc='upper right')  # Leyenda con fuente 12 en esquina superior derecha
 plt.ylim(0, 24)  # Límites del eje Y (horas trabajadas)
 plt.xlim(5, 23)  # Límites del eje X (salario)
-plt.show()  # Muestra el gráfico
 
 # ============================================================================
 #                    8. GUARDADO Y DESCARGA DEL GRÁFICO
 # ============================================================================
 plt.savefig('modelo_renta_ocio.png', dpi=300, bbox_inches='tight')  # Guarda en PNG con alta calidad
 print("Gráfico guardado como 'modelo_renta_ocio.png'")  # Mensaje de confirmación
+plt.show()  # Muestra el gráfico
 files.download('modelo_renta_ocio.png')  # Descarga automática en Google Colab
