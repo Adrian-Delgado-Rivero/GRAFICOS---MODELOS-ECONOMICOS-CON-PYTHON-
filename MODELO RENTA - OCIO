@@ -1,0 +1,111 @@
+##############################################################################
+#         MODELO RENTA OCIO - GOOGLE COLAB / PYTHON 3
+#         AUTOR: ADRIAN ALEJANDRO DELGADO RIVERO
+#         CONTACTO: draadrian3082000@gmail.com - adrian.alejandro.delgado.rivero@gmail.com
+#         COCHABAMBA - B0LIVIA
+##############################################################################
+##############################################################################
+
+# ============================================================================
+#                    1. IMPORTAMOS PAQUETES NECESARIOS
+# ============================================================================
+import numpy as np  # Importa NumPy para cálculos matemáticos avanzados
+import matplotlib.pyplot as plt  # Importa Matplotlib para crear gráficos
+from google.colab import files  # Funcionalidad específica de Colab para descargar archivos
+
+# ============================================================================
+#                    2. CONFIGURACIÓN BÁSICA DEL GRÁFICO
+# ============================================================================
+plt.figure(figsize=(10, 8))  # Crea una figura de 10x8 pulgadas (ancho x alto)
+plt.title('Modelo Renta-Ocio', fontsize=16)  # Título principal con tamaño de fuente 16
+plt.xlabel('Horas de trabajo (H)', fontsize=14)  # Etiqueta eje X con fuente 14
+plt.ylabel('Salario (w)', fontsize=14)  # Etiqueta eje Y con fuente 14
+plt.grid(True, linestyle='--', alpha=0.7)  # Activa cuadrícula con líneas discontinuas y transparencia 70%
+
+# ============================================================================
+#                    3. DEFINICIÓN DE PARÁMETROS DEL MODELO
+# ============================================================================
+H_max = 24  # Máximo de horas disponibles en el día (24 horas)
+w_range = np.linspace(5, 30, 1000)  # Crea 1000 valores entre 5 y 30 (salarios) para mayor precisión gráfica
+
+# ============================================================================
+#                    4. CONSTRUCCIÓN DE LA CURVA DE OFERTA DE TRABAJO
+# ============================================================================
+# La oferta tiene forma de C invertida con dos ramas:
+# Rama 1: Efecto sustitución mayor que efecto renta (ES > ER)
+H_oferta = 12 - np.sqrt((16 - w_range)/0.1)  # Ecuación matemática para la primera rama
+# Rama 2: Efecto renta mayor que efecto sustitución (ER > ES)
+H_oferta_alt = 12 + np.sqrt((16 - w_range)/0.1)  # Ecuación para la segunda rama
+
+# Filtramos valores no válidos (imaginarios o fuera de rango):
+# Para la primera rama (ES > ER)
+mask = (w_range <= 16) & (H_oferta >= 0)  # Solo valores con salario ≤16 y horas ≥0
+plt.plot(w_range[mask], H_oferta[mask], 'b-', linewidth=2,  # Grafica con línea azul continua
+         label='Oferta de trabajo (ES<ER)')  # Etiqueta para la leyenda
+
+# Para la segunda rama (ER > ES)
+mask = (w_range <= 16) & (H_oferta_alt <= 24)  # Solo valores con salario ≤16 y horas ≤24
+plt.plot(w_range[mask], H_oferta_alt[mask], 'b--', linewidth=2,  # Línea azul discontinua
+         label='Oferta de trabajo (ES>ER)')  # Etiqueta para la leyenda
+
+# ============================================================================
+#                    5. CONSTRUCCIÓN DE LA CURVA DE DEMANDA DE TRABAJO
+# ============================================================================
+H_demanda = 50/(w_range - 5)  # Función hiperbólica que representa la demanda
+
+# Filtramos valores no válidos (horas negativas o mayores a 24)
+mask = (H_demanda >= 0) & (H_demanda <= 24)  # Solo valores entre 0 y 24 horas
+plt.plot(w_range[mask], H_demanda[mask], 'r-', linewidth=2,  # Línea roja continua
+         label='Demanda de trabajo')  # Etiqueta para la leyenda
+
+# ============================================================================
+#                    6. CÁLCULO Y MARCAJE DE PUNTOS DE EQUILIBRIO
+# ============================================================================
+# Definimos las ramas completas de la oferta para cálculo de equilibrios
+H_oferta_rama1 = np.where((w_range <= 16) & (H_oferta >= 0), H_oferta, np.nan)
+H_oferta_rama2 = np.where((w_range <= 16) & (H_oferta_alt <= 24), H_oferta_alt, np.nan)
+
+# Calculamos diferencias entre oferta y demanda para encontrar intersecciones
+diff_rama1 = H_oferta_rama1 - H_demanda  # Diferencia con primera rama de oferta
+diff_rama2 = H_oferta_rama2 - H_demanda  # Diferencia con segunda rama de oferta
+
+def find_intersections(w, diff):
+    """Función que encuentra puntos donde las curvas se cruzan (equilibrios)
+       w: array de salarios
+       diff: diferencias entre oferta y demanda"""
+    intersections = []  # Lista para almacenar puntos de equilibrio
+    for i in range(len(diff)-1):
+        if not np.isnan(diff[i]) and not np.isnan(diff[i+1]):
+            if diff[i]*diff[i+1] < 0:  # Detecta cambio de signo (indicador de cruce)
+                # Interpolación lineal para precisión:
+                w_int = w[i] - diff[i]*(w[i+1]-w[i])/(diff[i+1]-diff[i])
+                H_int = np.interp(w_int, w_range, H_demanda)  # Encuentra horas correspondientes
+                intersections.append((w_int, H_int))  # Añade el punto de equilibrio
+    return intersections
+
+# Encontramos todos los equilibrios posibles
+equilibrios = find_intersections(w_range, diff_rama1) + find_intersections(w_range, diff_rama2)
+
+# Marcamos los equilibrios en el gráfico:
+for i, (w_eq, H_eq) in enumerate(equilibrios):
+    plt.scatter(w_eq, H_eq, color='green', s=100, zorder=5,  # Punto verde grande
+               label=f'Equilibrio {i+1}' if len(equilibrios) > 1 else 'Equilibrio')
+    plt.axvline(x=w_eq, color='gray', linestyle=':', alpha=0.5)  # Línea vertical gris
+    plt.axhline(y=H_eq, color='gray', linestyle=':', alpha=0.5)  # Línea horizontal gris
+
+# ============================================================================
+#                    7. AJUSTES FINALES DEL GRÁFICO
+# ============================================================================
+plt.yticks(np.arange(0, 25, 2))  # Marcas del eje Y cada 2 horas (0, 2, 4,..., 24)
+plt.xticks(np.arange(5, 31, 2))  # Marcas del eje X cada 2 unidades salariales (5,7,...,30)
+plt.legend(fontsize=12, loc='upper right')  # Leyenda con fuente 12 en esquina superior derecha
+plt.ylim(0, 24)  # Límites del eje Y (horas trabajadas)
+plt.xlim(5, 23)  # Límites del eje X (salario)
+plt.show()  # Muestra el gráfico
+
+# ============================================================================
+#                    8. GUARDADO Y DESCARGA DEL GRÁFICO
+# ============================================================================
+plt.savefig('modelo_renta_ocio.png', dpi=300, bbox_inches='tight')  # Guarda en PNG con alta calidad
+print("Gráfico guardado como 'modelo_renta_ocio.png'")  # Mensaje de confirmación
+files.download('modelo_renta_ocio.png')  # Descarga automática en Google Colab
